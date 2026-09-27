@@ -16,6 +16,8 @@ const MELEE_DAMAGE = 10;
 const MELEE_DELAY = 0.85;
 const START_AMMO = 42;
 const AMMO_MAX = 90;
+const TURN = 2.4;
+const RELOAD_DELAY = 0.45;
 
 const ALIEN_SPAWNS = [
   { x: 0, z: 6.35 },
@@ -70,6 +72,7 @@ const player = {
 let mode = "menu";
 let mouseDown = false;
 let fireCooldown = 0;
+let reloadLeft = 0;
 let dryLock = false;
 let recoil = 0;
 let muzzleTime = 0;
@@ -110,9 +113,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.setClearColor(0x07080b);
 document.body.prepend(renderer.domElement);
 
-const up = new THREE.Vector3(0, 1, 0);
 const forward = new THREE.Vector3();
-const right = new THREE.Vector3();
 const aim = new THREE.Vector3();
 const eyePos = new THREE.Vector3();
 
@@ -570,6 +571,7 @@ function resetMatch() {
   player.invuln = 0;
   player.hurt = 0;
   fireCooldown = 0;
+  reloadLeft = 0;
   dryLock = false;
   recoil = 0;
   muzzleTime = 0;
@@ -663,6 +665,10 @@ function setKey(event, down) {
     event.preventDefault();
   }
   if (event.code === "ShiftLeft" || event.code === "ShiftRight") keys.shift = down;
+  if (event.code === "KeyR") {
+    if (down && !event.repeat) requestReload();
+    event.preventDefault();
+  }
 }
 
 function begin() {
@@ -708,6 +714,7 @@ function frame(now) {
 
 function simulate(dt) {
   syncCamera();
+  updateReload(dt);
   tryFire(dt);
   movePlayer(dt);
   for (const alien of aliens) {
@@ -730,12 +737,14 @@ function simulate(dt) {
 }
 
 function movePlayer(dt) {
+  // Positive yaw turns left, matching mouse look (rightward movement decreases yaw).
+  if (keys.a) player.yaw += TURN * dt;
+  if (keys.d) player.yaw -= TURN * dt;
   syncCamera();
   camera.getWorldDirection(forward);
   forward.y = 0;
   if (forward.lengthSq() < 0.0001) return;
   forward.normalize();
-  right.crossVectors(up, forward);
   let mx = 0;
   let mz = 0;
   if (keys.w) {
@@ -746,14 +755,6 @@ function movePlayer(dt) {
     mx -= forward.x;
     mz -= forward.z;
   }
-  if (keys.d) {
-    mx += right.x;
-    mz += right.z;
-  }
-  if (keys.a) {
-    mx -= right.x;
-    mz -= right.z;
-  }
   const len = Math.hypot(mx, mz);
   if (len > 0) {
     const speed = (keys.shift ? RUN : WALK) * dt;
@@ -762,8 +763,22 @@ function movePlayer(dt) {
   }
 }
 
+function requestReload() {
+  if (mode !== "playing" || reloadLeft > 0 || player.ammo >= START_AMMO) return;
+  reloadLeft = RELOAD_DELAY;
+}
+
+function updateReload(dt) {
+  if (reloadLeft <= 0) return;
+  reloadLeft = Math.max(0, reloadLeft - dt);
+  if (reloadLeft > 0 || mode !== "playing" || player.ammo >= START_AMMO) return;
+  player.ammo = START_AMMO;
+  updateHud();
+}
+
 function tryFire(dt) {
   fireCooldown = Math.max(0, fireCooldown - dt);
+  if (reloadLeft > 0) return;
   if (!mouseDown) {
     dryLock = false;
     return;
@@ -1025,7 +1040,7 @@ function updateEffects(dt) {
   weapon.userData.flash.visible = showFlash;
   weapon.userData.flash2.visible = showFlash;
   weapon.userData.flashLight.intensity = showFlash ? 28 : 0;
-  const moving = mode === "playing" && (keys.w || keys.a || keys.s || keys.d);
+  const moving = mode === "playing" && (keys.w || keys.s);
   const amp = moving ? 0.016 : 0.0035;
   weapon.position.x = Math.sin(walkPhase * 0.5) * amp;
   weapon.position.y = -Math.abs(Math.sin(walkPhase)) * amp;
@@ -1080,7 +1095,7 @@ function spawnSpark(x, y, z, color) {
 }
 
 function syncCamera() {
-  const bob = mode === "playing" && (keys.w || keys.a || keys.s || keys.d) ? Math.sin(walkPhase * 2) * 0.02 : 0;
+  const bob = mode === "playing" && (keys.w || keys.s) ? Math.sin(walkPhase * 2) * 0.02 : 0;
   camera.position.set(player.x, EYE + bob, player.z);
   camera.rotation.order = "YXZ";
   camera.rotation.y = player.yaw;

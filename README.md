@@ -19,10 +19,12 @@ Any static file server works. The page loads Three.js as an ES module from a CDN
 ## Controls
 
 - Click the start overlay to capture the mouse
-- `W` `A` `S` `D` to move
+- `W` and `S` to move forward and back
+- `A` and `D` to turn left and right
 - Mouse to look
 - `Shift` to run
 - Left click to fire energy bolts
+- `R` to reload a magazine that is not already full
 - `Esc` to release the mouse
 - Restart on the win and lose screens
 
