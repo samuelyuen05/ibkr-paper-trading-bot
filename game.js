@@ -103,7 +103,7 @@ const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerH
 camera.rotation.order = "YXZ";
 scene.add(camera);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -120,26 +120,18 @@ const floorTex = makeFloorTexture();
 const wallTex = makeWallTexture();
 floorTex.repeat.set(14, 18);
 
-const floorMat = new THREE.MeshStandardMaterial({
-  map: floorTex,
-  roughness: 0.9,
-  metalness: 0.22,
-});
-const ceilMat = new THREE.MeshStandardMaterial({ color: 0x12151a, roughness: 0.95, metalness: 0.16 });
-const trimMat = new THREE.MeshStandardMaterial({
+const floorMat = new THREE.MeshLambertMaterial({ map: floorTex });
+const ceilMat = new THREE.MeshLambertMaterial({ color: 0x12151a });
+const trimMat = new THREE.MeshLambertMaterial({
   color: 0x12383c,
   emissive: 0x0c4c52,
   emissiveIntensity: 0.55,
-  roughness: 0.4,
-  metalness: 0.45,
 });
-const pipeMat = new THREE.MeshStandardMaterial({ color: 0x3d4650, roughness: 0.45, metalness: 0.7 });
-const pathMat = new THREE.MeshStandardMaterial({
+const pipeMat = new THREE.MeshLambertMaterial({ color: 0x3d4650 });
+const pathMat = new THREE.MeshLambertMaterial({
   color: 0x16343a,
   emissive: 0x0a3e46,
   emissiveIntensity: 0.45,
-  roughness: 0.48,
-  metalness: 0.35,
   polygonOffset: true,
   polygonOffsetFactor: -2,
   polygonOffsetUnits: -2,
@@ -267,7 +259,7 @@ function wallMaterial(width, height) {
   map.wrapS = map.wrapT = THREE.RepeatWrapping;
   map.repeat.set(Math.max(1, width / 2.4), Math.max(1, height / 2.4));
   map.colorSpace = THREE.SRGBColorSpace;
-  return new THREE.MeshStandardMaterial({ map, roughness: 0.86, metalness: 0.32 });
+  return new THREE.MeshLambertMaterial({ map });
 }
 
 function addWallX(z, x1, x2) {
@@ -317,7 +309,7 @@ function addLight(x, z, color, intensity) {
   scene.add(lamp);
   const fixture = new THREE.Mesh(
     new THREE.BoxGeometry(0.7, 0.08, 0.28),
-    new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.7, roughness: 0.35 })
+    new THREE.MeshLambertMaterial({ color, emissive: color, emissiveIntensity: 0.7 })
   );
   fixture.position.set(x, 3.12, z);
   scene.add(fixture);
@@ -408,13 +400,12 @@ function buildLevel() {
 function buildWeapon() {
   const group = new THREE.Group();
   camera.add(group);
-  const metal = new THREE.MeshStandardMaterial({ color: 0x4a545f, roughness: 0.38, metalness: 0.74 });
-  const dark = new THREE.MeshStandardMaterial({ color: 0x1c2228, roughness: 0.5, metalness: 0.5 });
-  const glow = new THREE.MeshStandardMaterial({
+  const metal = new THREE.MeshLambertMaterial({ color: 0x4a545f });
+  const dark = new THREE.MeshLambertMaterial({ color: 0x1c2228 });
+  const glow = new THREE.MeshLambertMaterial({
     color: 0x1d6dff,
     emissive: 0x49b7ff,
     emissiveIntensity: 1.15,
-    roughness: 0.28,
   });
 
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.46), metal);
@@ -483,10 +474,8 @@ function makeArm(parent, skin, side) {
 
 function createAlien(index, x, z) {
   const group = new THREE.Group();
-  const skin = new THREE.MeshStandardMaterial({
+  const skin = new THREE.MeshLambertMaterial({
     color: SKINS[index % SKINS.length],
-    roughness: 0.62,
-    metalness: 0.08,
     emissive: 0x142018,
     emissiveIntensity: 0.28,
   });
@@ -791,7 +780,7 @@ function tryFire(dt) {
   fireCooldown = FIRE_DELAY;
   player.ammo -= 1;
   recoil = 1;
-  muzzleTime = 0.05;
+  muzzleTime = 0.08;
   spawnBolt();
   sndShoot();
 }
